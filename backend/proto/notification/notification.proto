@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package notification;
+
+option go_package = "shared/proto/notification;notificationpb";
+
+service NotificationService {
+  rpc SendConfirmation(SendConfirmationRequest) returns (SendConfirmationResponse);
+}
+
+message SendConfirmationRequest {
+  string customer = 1;
+  string order_id = 2;
+}
+
+message SendConfirmationResponse {
+  bool sent = 1;
+  string message = 2;
+}

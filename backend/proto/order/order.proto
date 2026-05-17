@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package order;
+
+option go_package = "shared/proto/order;orderpb";
+
+service OrderService {
+  rpc PlaceOrder(PlaceOrderRequest) returns (PlaceOrderResponse);
+}
+
+message PlaceOrderRequest {
+  string customer = 1;
+  string item = 2;
+  int32 quantity = 3;
+}
+
+message PlaceOrderResponse {
+  string order_id = 1;
+  string status = 2;
+}
+
+
+
