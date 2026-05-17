@@ -27,6 +27,32 @@ REST               HTTP                 gRPC
                                               [ Inventory Service ]
 ```
 
+### Repository Structure
+
+```bash
+order-platform/
+├── cmd/ # binaries
+│   ├── gateway/        # REST → gRPC, the client-facing edge
+│   ├── orderservice/   # owns orders
+│   ├── inventoryservice/
+│   └── notificationservice/
+├── internal/
+│   ├── gateway/        # RESTful API
+│   ├── order/          # order domain logic
+│   ├── inventory/      # inventory domain logic
+│   ├── notification/   # notification domain logic
+│   └── eventbus/       # messaging abstraction — empty until Stage 3
+├── proto/
+│   ├── order/order.proto
+│   ├── inventory/inventory.proto
+│   └── notification/notification.proto
+├── shared/
+│   ├── ... # shared utilities and types like logger,config etc
+└── go.mod
+
+```
+
+
 ## Requisities and Installation
 
 ### Prerequisities
