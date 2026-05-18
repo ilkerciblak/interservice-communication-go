@@ -2,10 +2,26 @@ syntax = "proto3";
 
 package inventory;
 
+
 option go_package = "shared/proto/inventory;inventorypb";
 
 service InventoryService {
   rpc ReserveStock(ReserveStockRequest) returns (ReserveStockResponse);
+  rpc GetInventory(GetInventoryRequest) returns (GetInventoryResponse);
+}
+
+message GetInventoryResponse {
+  repeated Product products = 1;
+}
+
+message GetInventoryRequest{
+}
+
+message Product {
+  string id = 1;
+  string title = 2;
+  int32 quantity = 3;
+  int32 reserved_count = 4;
 }
 
 message ReserveStockRequest {

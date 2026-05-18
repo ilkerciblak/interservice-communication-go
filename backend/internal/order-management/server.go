@@ -25,6 +25,9 @@ func OrderServer(s *grpc.Server, orderService OrderServiceInterface) *orderServe
 func (s *orderServer) PlaceOrder(ctx context.Context, req *orderpb.PlaceOrderRequest) (*orderpb.PlaceOrderResponse, error) {
 	o, err := s.service.PlaceOrder(ctx, req.Customer, req.Item, int(req.Quantity))
 	if err != nil {
+		if o != nil {
+			return &orderpb.PlaceOrderResponse{OrderId: o.ID, Status: "rejected"}, nil
+		}
 		return nil, err
 	}
 	return &orderpb.PlaceOrderResponse{OrderId: o.ID, Status: "placed"}, nil

@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	inventorypb "ilkerciblak/order-management/shared/proto/inventory"
 	orderpb "ilkerciblak/order-management/shared/proto/order"
 	"log"
 	"net/http"
@@ -16,16 +17,23 @@ func main() {
 		"localhost:50051",
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
+
+	if err != nil {
+		log.Fatalf("failed to start gateway: %v", err)
+	}
+
+	conn2, err := grpc.NewClient("localhost:50052", grpc.WithTransportCredentials(insecure.NewCredentials()))
+
 	if err != nil {
 		log.Fatalf("failed to start gateway: %v", err)
 	}
 	defer conn.Close()
+	defer conn2.Close()
 
 	g := gateway{
-		orderClient: orderpb.NewOrderServiceClient(conn),
+		orderClient:     orderpb.NewOrderServiceClient(conn),
+		inventoryClient: inventorypb.NewInventoryServiceClient(conn2),
 	}
-	
-	
 
 	mux := http.NewServeMux()
 
@@ -35,12 +43,14 @@ func main() {
 	}
 
 	mux.HandleFunc("POST /orders", g.handlePlaceOrder)
+	mux.HandleFunc("GET /inventory", g.handleGetInventory)
 
 	log.Fatal(server.ListenAndServe())
 }
 
 type gateway struct {
-	orderClient orderpb.OrderServiceClient
+	orderClient     orderpb.OrderServiceClient
+	inventoryClient inventorypb.InventoryServiceClient
 }
 
 type placeOrderRequest struct {
@@ -68,10 +78,25 @@ func (g *gateway) handlePlaceOrder(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to place order: "+err.Error(), http.StatusBadGateway)
 		return
 	}
+
 	w.Header().Set("content-type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
 		"order_id": resp.OrderId,
 		"status":   resp.Status,
+	})
+}
+
+func (g *gateway) handleGetInventory(w http.ResponseWriter, r *http.Request) {
+
+	resp, err := g.inventoryClient.GetInventory(r.Context(), &inventorypb.GetInventoryRequest{})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadGateway)
+		return
+	}
+
+	w.Header().Set("content-type", "application/json")
+	json.NewEncoder(w).Encode(map[string][]*inventorypb.Product{
+		"products": resp.GetProducts(),
 	})
 
 }
