@@ -21,6 +21,7 @@ func (r *OrderRepository) CreateOrder(ctx context.Context, order Order) error {
 	if err != nil {
 		return err
 	}
+	defer file.Close()
 
 	if _, err := file.Write(data); err != nil {
 		return err
