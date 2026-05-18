@@ -2,6 +2,7 @@ package main
 
 import (
 	inventorypb "ilkerciblak/order-management/shared/proto/inventory"
+	notificationpb "ilkerciblak/order-management/shared/proto/notification"
 	"log"
 	"net"
 
@@ -22,10 +23,17 @@ func main() {
 	}
 	inventoryClient := inventorypb.NewInventoryServiceClient(conn)
 
+	notificationConn, err := grpc.NewClient("localhost:50053", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	notificationClient := notificationpb.NewNotificationServiceClient(notificationConn)
+
 	grpcServer := grpc.NewServer()
 
 	orderRepository := OrderRepository{}
-	orderService := OrderService{Repository: &orderRepository, inventoryClient: inventoryClient}
+	orderService := OrderService{Repository: &orderRepository, inventoryClient: inventoryClient, notificationClient: notificationClient}
 	OrderServer(grpcServer, &orderService)
 
 	log.Fatal(grpcServer.Serve(lis))
