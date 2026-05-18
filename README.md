@@ -68,9 +68,9 @@ The system will include following system components:
 
 
 - [x] **Stage 0**: Setup, protobuf, domain skeleton (~25 min): Monorepo layout, the .proto contracts, code generation. No running services yet.
-- [] **Stage 1**: The gateway and one gRPC service (~35 min): REST gateway → gRPC → order service. The client-facing edge works end to end.
-- [] **Stage 2**: Synchronous gRPC fan-out (~45 min): Order service calls inventory and notification over gRPC, in-line. The system works — and you'll feel exactly why this hurts.
-- [] **Stage 3**: The messaging abstraction layer (~45 min): Define EventBus, Publisher, Subscriber interfaces. Centralized, modular, interface-driven. No behavior change yet — this is the seam.
+- [x] **Stage 1**: The gateway and one gRPC service (~35 min): REST gateway → gRPC → order service. The client-facing edge works end to end.
+- [x] **Stage 2**: Synchronous gRPC fan-out (~45 min): Order service calls inventory and notification over gRPC, in-line. The system works — and you'll feel exactly why this hurts.
+- [x] **Stage 3**: The messaging abstraction layer (~45 min): Define EventBus, Publisher, Subscriber interfaces. Centralized, modular, interface-driven. No behavior change yet — this is the seam.
 - [] **Stage 4**: Migrate notification to async (~50 min): Order service publishes order.placed; notification subscribes. Drop the gRPC call. One service, fully event-driven.
 - [] **Stage 5**: Migrate inventory to async (~40 min): Same move for inventory, plus the interesting wrinkle — inventory produces a result, so it publishes stock.reserved back. You meet event choreography.
 - [] **Stage 6**: Production concerns (~50 min): Manual ack, dead-letter queue, graceful shutdown. The system becomes resilient instead of merely functional.
