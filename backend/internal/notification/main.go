@@ -2,8 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
-	eventbus "ilkerciblak/order-management/internal/event-bus"
 	"ilkerciblak/order-management/shared/messaging"
 	"log"
 	"net"
@@ -31,18 +29,18 @@ func main() {
 
 	defer eventBus.Close(ctx)
 
-	if err := eventBus.Subscribe(ctx, eventbus.OrderPlaced, func(ctx context.Context, e messaging.Event) error {
-		var payload eventbus.OrderPlacedPayload
-		if err := json.Unmarshal(e.Payload, &payload); err != nil {
-			log.Printf("failed to decode event (%s) payload: %v", e.Name, err)
-		}
-
-		log.Printf("[notification]: event arrived: %s | order %s confirmed", e.Name, payload.OrderID)
-
-		return nil
-	}); err != nil {
-		log.Fatal(err)
-	}
+	// if err := eventBus.Subscribe(ctx, eventbus.OrderPlaced, func(ctx context.Context, e messaging.Event) error {
+	// 	var payload eventbus.OrderPlacedPayload
+	// 	if err := json.Unmarshal(e.Payload, &payload); err != nil {
+	// 		log.Printf("failed to decode event (%s) payload: %v", e.Name, err)
+	// 	}
+	//
+	// 	log.Printf("[notification]: event arrived: %s | order %s confirmed", e.Name, payload.OrderID)
+	//
+	// 	return nil
+	// }); err != nil {
+	// 	log.Fatal(err)
+	// }
 
 	InitNotificationGrpcServer(grpcServer)
 	go func() {
