@@ -54,7 +54,7 @@ func (r *inventoryRepository) ReserveProduct(ctx context.Context, productID stri
 	})
 
 	product := inventory.Products[productIdx]
-	fmt.Fprintf(os.Stdout, "product: %s - reserved: %d", product.Title, product.ReservedCount)
+	fmt.Fprintf(os.Stdout, "product: %s - reserved: %d\n", product.Title, product.ReservedCount)
 	if product.ReservedCount >= product.Quantity {
 		return fmt.Errorf("in-sufficient stock")
 	}

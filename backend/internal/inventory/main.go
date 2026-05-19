@@ -20,31 +20,39 @@ func main() {
 	eventBus, err := messaging.RegisterRabbitMQ()
 	if err != nil {
 		log.Fatalf("failed to initialize rabbitMQ: %v", err)
+		return
 	}
 	defer eventBus.Close(ctx)
 
 	repo := inventoryRepository{}
 	service := inventoryService{Repo: &repo}
 
-	if err := eventBus.Subscribe(ctx, eventbus.OrderPlaced, func(ctx context.Context, e messaging.Event) error {
+	if err = eventBus.Subscribe(ctx, eventbus.OrderPlaced, func(ctx context.Context, e messaging.Event) error {
+		log.Printf("[inventory] -- Reservation Rejected for ")
+
 		var payload eventbus.OrderPlacedPayload
-		if err := json.Unmarshal(e.Payload, &payload); err != nil {
+
+		if err = json.Unmarshal(e.Payload, &payload); err != nil {
 			log.Printf("[inventory] failed to decode event %s payload: %v", e.Name, e.Payload)
 			return err
 		}
 
 		log.Printf("[inventory] event %s | ", e.Name)
-		var res = eventbus.StockReservedPayload{
+		res := eventbus.StockReservedPayload{
 			OrderID:  payload.OrderID,
 			Item:     payload.Item,
 			Quantity: payload.Quantity,
 			Reserved: true,
 		}
-		if err := service.ReserveProduct(ctx, payload.Item); err != nil {
-			res = eventbus.StockReservedPayload{Reserved: false, OrderID: payload.OrderID, Item: payload.Item, Quantity: payload.Quantity, Message: err.Error()}
-		}
 
-		return eventBus.Publish(ctx, eventbus.StockReservedEvent(res))
+		if err = service.ReserveProduct(ctx, payload.Item); err != nil {
+			res = eventbus.StockReservedPayload{Reserved: false, OrderID: payload.OrderID, Item: payload.Item, Quantity: payload.Quantity, Message: err.Error()}
+			log.Printf("[inventory] -- Reservation Rejected for %s", payload.OrderID)
+		}
+		if err = eventBus.Publish(ctx, eventbus.StockReservedEvent(res)); err != nil {
+			return err
+		}
+		return nil
 	}); err != nil {
 		log.Fatal(err)
 	}
