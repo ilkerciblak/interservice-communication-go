@@ -3,6 +3,8 @@ package messaging
 import (
 	"context"
 	"fmt"
+	"os"
+	"strings"
 
 	"github.com/rabbitmq/amqp091-go"
 )
@@ -15,7 +17,11 @@ type rabbitMQEventBus struct {
 	handlers       map[string][]EventHandler
 }
 
-func RegisterRabbitMQ(url string) (EventBus, error) {
+func RegisterRabbitMQ() (EventBus, error) {
+	url := os.Getenv("AMQP_URL")
+	if strings.TrimSpace(url) == "" {
+		return nil, fmt.Errorf("amqp_url is empty")
+	}
 	conn, err := amqp091.Dial(url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to dial amqp01: %w", err)
