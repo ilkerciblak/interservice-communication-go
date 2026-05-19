@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"slices"
 )
 
 type OrderRepository struct {
@@ -11,25 +12,81 @@ type OrderRepository struct {
 
 func (r *OrderRepository) CreateOrder(ctx context.Context, order Order) error {
 
-	data, err := json.MarshalIndent(order, "", "")
-	if err != nil {
-		return err
+	var orders struct {
+		Orders []Order `json:"orders"`
 	}
-	
-
-	file, err := os.OpenFile("../../data/order.json", os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o666)
+	file, err := os.OpenFile("../../data/order.json", os.O_RDWR|os.O_CREATE, 0o666)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
 
-	if _, err := file.Write(data); err != nil {
+	if err := json.NewDecoder(file).Decode(&orders); err != nil {
 		return err
 	}
 
-	// if err := os.WriteFile("/data/order.json", data, 0644); err != nil {
-	// 	return fmt.Errorf("failed to write to file: %w", err)
-	// }
+	orders.Orders = append(orders.Orders, order)
+	data, err := json.Marshal(orders)
+	if err != nil {
+		return err
+	}
+
+	if _, err := file.WriteAt(data,0); err != nil {
+		return err
+	}
 
 	return nil
+}
+
+func (r *OrderRepository) UpdateOrder(ctx context.Context, orderID string, updated Order) error {
+
+	var orders struct {
+		Orders []Order `json:"orders"`
+	}
+
+	file, err := os.OpenFile("../../data/order.json", os.O_RDWR|os.O_CREATE, 0o666)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	if err := json.NewDecoder(file).Decode(&orders); err != nil {
+		return err
+	}
+
+	orderIDX := slices.IndexFunc(orders.Orders, func(o Order) bool {
+		return o.ID == orderID
+	})
+
+	orders.Orders[orderIDX] = updated
+
+	data, err := json.Marshal(orders)
+	if err != nil {
+		return err
+	}
+
+	if _, err := file.WriteAt(data,0); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *OrderRepository) GetOrder(ctx context.Context, orderID string) (*Order, error) {
+	var orders struct {
+		Orders []Order `json:"orders"`
+	}
+
+	file, err := os.OpenFile("../../data/order.json", os.O_RDONLY, 0o444)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := json.NewDecoder(file).Decode(&orders); err != nil {
+		return nil, err
+	}
+
+	orderIDX := slices.IndexFunc(orders.Orders, func(o Order) bool { return o.ID == orderID })
+
+	return &orders.Orders[orderIDX], nil
 }
