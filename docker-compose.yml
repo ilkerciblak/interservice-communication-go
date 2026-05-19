@@ -11,8 +11,8 @@ services:
       - "8080:300" # client app ports
     tty: true
     stdin_open: true
-    # env_file:
-    #   - ./.env
+    env_file:
+      - ./.env
     # healthcheck:
     #   test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
     #   interval: 30s
