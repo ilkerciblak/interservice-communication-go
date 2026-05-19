@@ -42,3 +42,21 @@ func OrderPlacedEvent(payload OrderPlacedPayload) messaging.Event {
 	}
 
 }
+
+func StockReservedEvent(payload StockReservedPayload) messaging.Event {
+	name := StockReserved
+	timeStamp := time.Now()
+	payloadByte := make([]byte, 0)
+
+	data, err := json.Marshal(payload)
+	if err == nil {
+		payloadByte = append(payloadByte, data...)
+	}
+
+	return messaging.Event{
+		Name:      name,
+		TimeStamp: timeStamp,
+		Payload:   payloadByte,
+	}
+
+}
