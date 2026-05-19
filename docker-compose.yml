@@ -11,11 +11,24 @@ services:
       - "8080:300" # client app ports
     tty: true
     stdin_open: true
-    # env_file:
-    #   - ./.env
+    env_file:
+      - ./.env
     # healthcheck:
     #   test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
     #   interval: 30s
     #   timeout: 10s
     #   retries: 5
+  rabbit:
+    image: rabbitmq:3-management-alpine
+    ports:
+      - "5673:5672"
+      - "15673:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest 
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
 
+volumes:
+  rabbitmq_data:
+    

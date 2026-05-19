@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"ilkerciblak/order-management/shared/messaging"
 	inventorypb "ilkerciblak/order-management/shared/proto/inventory"
 	notificationpb "ilkerciblak/order-management/shared/proto/notification"
 	"log"
@@ -32,8 +34,20 @@ func main() {
 
 	grpcServer := grpc.NewServer()
 
+	rabbit, err := messaging.RegisterRabbitMQ()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer rabbit.Close(context.Background())
+
 	orderRepository := OrderRepository{}
-	orderService := OrderService{Repository: &orderRepository, inventoryClient: inventoryClient, notificationClient: notificationClient}
+	orderService := OrderService{
+		Repository:         &orderRepository,
+		inventoryClient:    inventoryClient,
+		notificationClient: notificationClient,
+		Publisher:          rabbit,
+	}
 	OrderServer(grpcServer, &orderService)
 
 	log.Fatal(grpcServer.Serve(lis))
