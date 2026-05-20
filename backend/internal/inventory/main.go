@@ -25,11 +25,9 @@ func main() {
 	defer eventBus.Close(ctx)
 
 	repo := inventoryRepository{}
-	service := inventoryService{Repo: &repo}
+	service := inventoryService{Repo: &repo, Publisher: eventBus}
 
 	if err = eventBus.Subscribe(ctx, eventbus.OrderPlaced, func(ctx context.Context, e messaging.Event) error {
-		log.Printf("[inventory] -- Reservation Rejected for ")
-
 		var payload eventbus.OrderPlacedPayload
 
 		if err = json.Unmarshal(e.Payload, &payload); err != nil {
@@ -37,21 +35,15 @@ func main() {
 			return err
 		}
 
-		log.Printf("[inventory] event %s | ", e.Name)
-		res := eventbus.StockReservedPayload{
-			OrderID:  payload.OrderID,
-			Item:     payload.Item,
-			Quantity: payload.Quantity,
-			Reserved: true,
+		if err = service.ReserveProduct(ctx, payload.Item, payload.OrderID); err != nil {
+			log.Printf("[inventory] -- Reservation Rejected for %s", payload.OrderID)
+			eventBus.Publish(ctx, eventbus.NewEvent(eventbus.StockNotReserved, eventbus.StockNotReservedPayload{
+				OrderID: payload.OrderID,
+				Message: err.Error(),
+			},
+			))
 		}
 
-		if err = service.ReserveProduct(ctx, payload.Item); err != nil {
-			res = eventbus.StockReservedPayload{Reserved: false, OrderID: payload.OrderID, Item: payload.Item, Quantity: payload.Quantity, Message: err.Error()}
-			log.Printf("[inventory] -- Reservation Rejected for %s", payload.OrderID)
-		}
-		if err = eventBus.Publish(ctx, eventbus.StockReservedEvent(res)); err != nil {
-			return err
-		}
 		return nil
 	}); err != nil {
 		log.Fatal(err)

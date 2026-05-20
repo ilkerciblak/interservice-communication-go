@@ -15,7 +15,8 @@ type Product struct {
 
 type InventoryServiceInterface interface {
 	GetInventory(ctx context.Context) (*Inventory, error)
-	ReserveProduct(ctx context.Context, productID string) error
+	ReserveProductRPC(ctx context.Context, productID, orderID string) error
+	ReserveProduct(ctx context.Context, productID, orderID string) error
 }
 
 type InventoryRepositoryInterface interface {
