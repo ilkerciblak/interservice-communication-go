@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"ilkerciblak/order-management/shared/config"
 	eventbus "ilkerciblak/order-management/internal/event-bus"
 	"ilkerciblak/order-management/shared/messaging"
 	"log"
@@ -24,7 +25,9 @@ func main() {
 	}
 	defer eventBus.Close(ctx)
 
-	repo := inventoryRepository{}
+	cfg := config.Config()
+
+	repo := inventoryRepository{DataDir: cfg.DataDir}
 	service := inventoryService{Repo: &repo, Publisher: eventBus}
 
 	if err = eventBus.Subscribe(ctx, eventbus.OrderPlaced, func(ctx context.Context, e messaging.Event) error {

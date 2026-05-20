@@ -16,6 +16,12 @@ _Running RabbitMQ in local Docker means no signup, no credit card, no free-tier 
 
 ## Project Overview
 
+### Initial Project Plan
+
+Initial project plan visualizes project development plan. In order to observe the differences and trade-offs between synchronous and asynchronous communication patterns interservice communications will be developed using synchronous communication pattern (with gRPC) at first. Then, interservice communications will be migrated to asynchronous communication (with RabbitMQ) using `pub/sub` pattern.
+
+The client always interacts with the system through a RESTful API exposed by the Gateway, currently covering GET /inventory for browsing stock and POST /orders for placing new orders. To support these endpoints, the Order and Inventory services continue to communicate with the Gateway via gRPC, while all cross-service workflows are handled asynchronously through events.
+
 ```
 REST               HTTP                 gRPC
    [ Client ] ───────────▶ [ Gateway ] ──────▶ [ Order Service ]
@@ -27,28 +33,144 @@ REST               HTTP                 gRPC
                                               [ Inventory Service ]
 ```
 
+Synchronous and asynchronous are fundamental communication patterns that dictate how systems or people exchange information. Besides other trade-offs like development complexity and architectural flexibilities, core difference between these patterns is the processing with blocking vs. non-blocking behavior. While synchronous communication blocking the next process until the sender gathers its response, in asynchronous operation pattern sender just publishes an event then proceeds without waiting and processes the reply later.
+
+
+### Final Project Architecture with Event Driven Communication and gRPC 
+
+
+#### Application Flows
+```ascii
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ FLOW                                                                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ 1. Client  ──HTTP──►  Gateway  ──gRPC──►  Order Service                     │
+│ 2. Order Service creates order (status: pending)                            │
+│      ├─ returns pending order via gRPC ──► Gateway ──HTTP──► Client         │
+│      └─ publishes  OrderPlacedEvent                                         │
+│ 3. Inventory Service consumes OrderPlacedEvent → reserveStock()             │
+│      ├─ success → publishes StockReservedEvent                              │
+│      └─ failure → publishes StockNotReservedEvent → Order: rejected         │
+│ 4. Notification Service consumes StockReservedEvent → notifies user         │
+│      ├─ user confirms → publishes OrderConfirmedEvent → Order: confirmed    │
+│      └─ user cancels  → publishes OrderCancelledEvent → Order: cancelled    │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+
+
+```ascii
+                                  ┌──────────────┐
+                                  │    CLIENT    │
+                                  └──────┬───────┘
+                                         │
+                                       HTTP
+                                         │
+                                         ▼
+                                  ┌──────────────┐
+                                  │   GATEWAY    │
+                                  └──────┬───────┘
+                                         │
+                            ┌────────────┴────────────┐
+                          gRPC                       gRPC
+                            │                         │
+                            ▼                         ▼
+                   ┌─────────────────┐       ┌──────────────────┐
+                   │  ORDER SERVICE  │       │ INVENTORY SVC    │
+                   │                 │       │                  │
+                   │ • create(pending)│      │ • get inventory  │
+                   │ • reject()      │       │ • reserveStock() │
+                   │ • confirm()     │       │                  │
+                   │ • cancel()      │       │                  │
+                   └────┬───────▲────┘       └────┬─────────▲───┘
+                        │       │                 │         │
+                        │       │                 │         │
+                publishes    subscribes      subscribes  publishes
+                        │       │                 │         │
+                        │       │                 │         │
+   ┌────────────────────┼───────┼─────────────────┼─────────┼────────────────────┐
+   │                    │       │   EVENT BUS     │         │                    │
+   │                    ▼       │                 ▼         │                    │
+   │            OrderPlacedEvent┼─────────────────┘         │                    │
+   │                            │                           │                    │
+   │            StockNotReserved┘◄──────── publishes ───────┤                    │
+   │                                                        │                    │
+   │            StockReservedEvent ◄──────── publishes ─────┘                    │
+   │                    │                                                        │
+   │                    │  subscribes                                            │
+   │                    ▼                                                        │
+   │            ┌──────────────────────┐                                         │
+   │            │ NOTIFICATION SERVICE │                                         │
+   │            │                      │                                         │
+   │            │ • notify user        │                                         │
+   │            │ • await response     │                                         │
+   │            └──────────┬───────────┘                                         │
+   │                       │                                                     │
+   │                   publishes                                                 │
+   │                       │                                                     │
+   │         ┌─────────────┴──────────────┐                                      │
+   │         ▼                            ▼                                      │
+   │  OrderConfirmedEvent         OrderCancelledEvent                            │
+   │         │                            │                                      │
+   │         └──────────┬─────────────────┘                                      │
+   │                    │                                                        │
+   │              subscribed by Order Service ──────────────────────────────────►│
+   │                                                                             │
+   └─────────────────────────────────────────────────────────────────────────────┘
+```
+
 ### Repository Structure
 
+
 ```bash
-order-platform/
-├── cmd/ # binaries
-│   ├── gateway/        # REST → gRPC, the client-facing edge
-│   ├── orderservice/   # owns orders
-│   ├── inventoryservice/
-│   └── notificationservice/
-├── internal/
-│   ├── gateway/        # RESTful API
-│   ├── order/          # order domain logic
-│   ├── inventory/      # inventory domain logic
-│   ├── notification/   # notification domain logic
-│   └── eventbus/       # messaging abstraction — empty until Stage 3
-├── proto/
-│   ├── order/order.proto
-│   ├── inventory/inventory.proto
-│   └── notification/notification.proto
-├── shared/
-│   ├── ... # shared utilities and types like logger,config etc
-└── go.mod
+.
+├── backend
+│   ├── cmd # project binaries 
+│   ├── data # project data source
+│   │   ├── inventory_2.json
+│   │   └── order.json
+│   ├── internal 
+│   │   ├── event-bus
+│   │   │   └── events.go # typed events and utilities
+│   │   ├── gateway # RESTful API gateway
+│   │   │   └── main.go 
+│   │   ├── inventory # inventory domain logic
+│   │   │   ├── main.go
+│   │   │   ├── repository.go
+│   │   │   ├── server.go
+│   │   │   ├── service.go
+│   │   │   └── types.go
+│   │   ├── notification # notification domain logic
+│   │   │   ├── main.go
+│   │   │   └── server_grpc.go
+│   │   └── order-management # main application logic, order-management
+│   │       ├── main.go
+│   │       ├── repository.go
+│   │       ├── server.go
+│   │       ├── service.go
+│   │       └── types.go
+│   ├── proto # protobuf contracts 
+│   │   ├── inventory
+│   │   │   └── inventory.proto
+│   │   ├── notification
+│   │   │   └── notification.proto
+│   │   └── order
+│   │       └── order.proto
+│   └── shared # shared application logic, abstractions and utilities
+│       ├── messaging
+│       │   ├── in_memory.go
+│       │   ├── rabbit.go
+│       │   └── types.go
+│       └── proto
+│           ├── inventory
+│           ├── notification
+│           └── order
+│   ├── go.mod
+│   ├── go.sum
+├── docker-compose.yml
+├── Dockerfile
+├── Makefile
+└── README.md
 
 ```
 
@@ -71,8 +193,8 @@ The system will include following system components:
 - [x] **Stage 1**: The gateway and one gRPC service (~35 min): REST gateway → gRPC → order service. The client-facing edge works end to end.
 - [x] **Stage 2**: Synchronous gRPC fan-out (~45 min): Order service calls inventory and notification over gRPC, in-line. The system works — and you'll feel exactly why this hurts.
 - [x] **Stage 3**: The messaging abstraction layer (~45 min): Define EventBus, Publisher, Subscriber interfaces. Centralized, modular, interface-driven. No behavior change yet — this is the seam.
-- [] **Stage 4**: Migrate notification to async (~50 min): Order service publishes order.placed; notification subscribes. Drop the gRPC call. One service, fully event-driven.
-- [] **Stage 5**: Migrate inventory to async (~40 min): Same move for inventory, plus the interesting wrinkle — inventory produces a result, so it publishes stock.reserved back. You meet event choreography.
+- [x] **Stage 4**: Migrate notification to async (~50 min): Order service publishes order.placed; notification subscribes. Drop the gRPC call. One service, fully event-driven.
+- [x] **Stage 5**: Migrate inventory to async (~40 min): Same move for inventory, plus the interesting wrinkle — inventory produces a result, so it publishes stock.reserved back. You meet event choreography.
 - [] **Stage 6**: Production concerns (~50 min): Manual ack, dead-letter queue, graceful shutdown. The system becomes resilient instead of merely functional.
 
 _PS: This instruction was generated via some clever AI agent **unfortunately**._

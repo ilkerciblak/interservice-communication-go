@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"slices"
 )
 
@@ -14,11 +15,14 @@ import (
 // }
 
 type inventoryRepository struct {
+	DataDir string
 }
+
+const inventoryStorage string = "inventory_2.json"
 
 func (r *inventoryRepository) GetInventory(ctx context.Context) (*Inventory, error) {
 
-	file, err := os.OpenFile("../../data/inventory_2.json", os.O_RDONLY, 0o666)
+	file, err := os.OpenFile(filepath.Join(r.DataDir, inventoryStorage), os.O_RDONLY, 0o666)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read inventory.json: %w", err)
 	}
@@ -35,7 +39,7 @@ func (r *inventoryRepository) GetInventory(ctx context.Context) (*Inventory, err
 }
 
 func (r *inventoryRepository) ReserveProduct(ctx context.Context, productID string) error {
-	file, err := os.OpenFile("../../data/inventory_2.json", os.O_CREATE|os.O_RDWR, 0o666)
+	file, err := os.OpenFile(filepath.Join(r.DataDir, inventoryStorage), os.O_CREATE|os.O_RDWR, 0o666)
 	if err != nil {
 		return fmt.Errorf("failed to read inventory.json: %w", err)
 	}
