@@ -68,7 +68,7 @@ func (eb *rabbitMQEventBus) Publish(ctx context.Context, event Event) error {
 			Timestamp:    event.TimeStamp,
 		},
 	); err != nil {
-		return fmt.Errorf("failed to publish event %s: %w", err)
+		return fmt.Errorf("failed to publish event %s: %v", event.Name, err)
 	}
 
 	return nil

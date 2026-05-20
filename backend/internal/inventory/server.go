@@ -44,8 +44,7 @@ func (i *inventoryServer) GetInventory(ctx context.Context, in *inventorypb.GetI
 }
 
 func (i *inventoryServer) ReserveStock(ctx context.Context, in *inventorypb.ReserveStockRequest) (*inventorypb.ReserveStockResponse, error) {
-
-	if err := i.service.ReserveProduct(ctx, in.Item); err != nil {
+	if err := i.service.ReserveProduct(ctx, in.Item, in.OrderId); err != nil {
 		return &inventorypb.ReserveStockResponse{Reserved: false}, err
 	}
 

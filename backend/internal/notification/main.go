@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	eventbus "ilkerciblak/order-management/internal/event-bus"
 	"ilkerciblak/order-management/shared/messaging"
 	"log"
+	"math/rand/v2"
 	"net"
 	"os"
 	"os/signal"
@@ -31,15 +33,26 @@ func main() {
 
 	defer eventBus.Close(ctx)
 
-	if err := eventBus.Subscribe(ctx, eventbus.OrderPlaced, func(ctx context.Context, e messaging.Event) error {
-		var payload eventbus.OrderPlacedPayload
+	if err := eventBus.Subscribe(ctx, eventbus.StockReserved, func(ctx context.Context, e messaging.Event) error {
+
+		var payload eventbus.StockReservedPayload
+
 		if err := json.Unmarshal(e.Payload, &payload); err != nil {
-			log.Printf("failed to decode event (%s) payload: %v", e.Name, err)
+			return fmt.Errorf("failed to parse event %s: %w", e.Name, err)
 		}
 
-		log.Printf("[notification]: event arrived: %s | order %s confirmed", e.Name, payload.OrderID)
+		if payload.Reserved {
+			userConfirmation := rand.IntN(2) == 1
+			if userConfirmation {
+				_ = eventBus.Publish(ctx, eventbus.NewEvent(eventbus.OrderConfirmed, eventbus.OrderConfirmedPayload{OrderID: payload.OrderID}))
+				return nil
+			}
+			_ = eventBus.Publish(ctx, eventbus.NewEvent(eventbus.OrderCancelled, eventbus.OrderCancelledPayload{OrderID: payload.OrderID, Message: "user cancelled"}))
+		}
+		_ = eventBus.Publish(ctx, eventbus.NewEvent(eventbus.OrderCancelled, eventbus.OrderCancelledPayload{OrderID: payload.OrderID, Message: "stock not reserved"}))
 
 		return nil
+
 	}); err != nil {
 		log.Fatal(err)
 	}
