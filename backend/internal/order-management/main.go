@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	eventbus "ilkerciblak/order-management/internal/event-bus"
 	"ilkerciblak/order-management/shared/messaging"
 	"log"
@@ -54,18 +55,53 @@ func main() {
 		Publisher:  rabbit,
 	}
 
-	if err := rabbit.Subscribe(ctx, eventbus.StockReserved, func(ctx context.Context, e messaging.Event) error {
-		var payload eventbus.StockReservedPayload
+	if err := rabbit.Subscribe(ctx, eventbus.OrderConfirmed, func(ctx context.Context, e messaging.Event) error {
+		var payload eventbus.OrderConfirmedPayload
 
 		if err := json.Unmarshal(e.Payload, &payload); err != nil {
+			return fmt.Errorf("failed to parse event %s: %w", e.Name, err)
+		}
+
+		if err := orderService.ConfirmOrder(ctx, payload.OrderID); err != nil {
 			return err
 		}
 
-		if payload.Reserved {
-			return orderService.ConfirmOrder(ctx, payload.OrderID)
+		return nil
+
+	}); err != nil {
+		log.Fatalf("failed to subscribe event %s: %v", eventbus.OrderConfirmed, err)
+	}
+
+	if err := rabbit.Subscribe(ctx, eventbus.OrderCancelled, func(ctx context.Context, e messaging.Event) error {
+		var payload eventbus.OrderCancelledPayload
+
+		if err := json.Unmarshal(e.Payload, &payload); err != nil {
+			return fmt.Errorf("failed to parse event %s: %w", e.Name, err)
 		}
 
-		return orderService.RejectOrder(ctx, payload.OrderID)
+		if err := orderService.CancelOrder(ctx, payload.OrderID); err != nil {
+			return err
+		}
+
+		return nil
+
+	}); err != nil {
+		log.Fatalf("failed to subscribe event %s: %v", eventbus.OrderCancelled, err)
+	}
+
+	if err := rabbit.Subscribe(ctx, eventbus.StockNotReserved, func(ctx context.Context, e messaging.Event) error {
+		var payload eventbus.StockNotReservedPayload
+
+		if err := json.Unmarshal(e.Payload, &payload); err != nil {
+			return fmt.Errorf("failed to parse event %s: %w", e.Name, err)
+		}
+
+		if err := orderService.RejectOrder(ctx, payload.OrderID); err != nil {
+			return err
+		}
+
+		return nil
+
 	}); err != nil {
 		log.Fatal(err)
 	}

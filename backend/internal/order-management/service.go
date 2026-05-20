@@ -60,6 +60,21 @@ func (s *OrderService) ConfirmOrder(ctx context.Context, orderID string) error {
 	return nil
 }
 
+func (s *OrderService) CancelOrder(ctx context.Context, orderID string) error {
+	order, err := s.Repository.GetOrder(ctx, orderID)
+	if err != nil {
+		return err
+	}
+
+	order.Status = "cancelled"
+
+	if err := s.Repository.UpdateOrder(ctx, orderID, *order); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (s *OrderService) RejectOrder(ctx context.Context, orderID string) error {
 	order, err := s.Repository.GetOrder(ctx, orderID)
 	if err != nil {

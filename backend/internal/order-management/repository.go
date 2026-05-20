@@ -26,12 +26,12 @@ func (r *OrderRepository) CreateOrder(ctx context.Context, order Order) error {
 	}
 
 	orders.Orders = append(orders.Orders, order)
-	data, err := json.Marshal(orders)
+	data, err := json.MarshalIndent(orders, "", "")
 	if err != nil {
 		return err
 	}
 
-	if _, err := file.WriteAt(data,0); err != nil {
+	if _, err := file.WriteAt(data, 0); err != nil {
 		return err
 	}
 
@@ -60,12 +60,12 @@ func (r *OrderRepository) UpdateOrder(ctx context.Context, orderID string, updat
 
 	orders.Orders[orderIDX] = updated
 
-	data, err := json.Marshal(orders)
+	data, err := json.MarshalIndent(orders, "", "")
 	if err != nil {
 		return err
 	}
 
-	if _, err := file.WriteAt(data,0); err != nil {
+	if _, err := file.WriteAt(data, 0); err != nil {
 		return err
 	}
 

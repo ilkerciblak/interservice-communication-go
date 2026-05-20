@@ -17,6 +17,7 @@ type OrderServiceInterface interface {
 	PlaceOrder(ctx context.Context, customer, item string, quantity int) (*orderpb.PlaceOrderResponse, error)
 	RejectOrder(ctx context.Context, orderID string) error
 	ConfirmOrder(ctx context.Context, orderID string) error
+	CancelOrder(ctx context.Context, orderID string) error
 }
 
 type OrderRepositoryInterface interface {
