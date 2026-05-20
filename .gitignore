@@ -3,3 +3,4 @@
 *cmd
 *node_modules
 *.env
+backend/data/*.json
