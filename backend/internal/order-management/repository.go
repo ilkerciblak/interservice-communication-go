@@ -4,18 +4,21 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"path/filepath"
 	"slices"
 )
 
 type OrderRepository struct {
+	DataDir string
 }
 
 func (r *OrderRepository) CreateOrder(ctx context.Context, order Order) error {
 
+	fileDir := filepath.Join(r.DataDir, "order.json")
 	var orders struct {
 		Orders []Order `json:"orders"`
 	}
-	file, err := os.OpenFile("../../data/order.json", os.O_RDWR|os.O_CREATE, 0o666)
+	file, err := os.OpenFile(fileDir, os.O_RDWR|os.O_CREATE, 0o666)
 	if err != nil {
 		return err
 	}
@@ -44,7 +47,7 @@ func (r *OrderRepository) UpdateOrder(ctx context.Context, orderID string, updat
 		Orders []Order `json:"orders"`
 	}
 
-	file, err := os.OpenFile("../../data/order.json", os.O_RDWR|os.O_CREATE, 0o666)
+	file, err := os.OpenFile(filepath.Join(r.DataDir, "order.json"), os.O_RDWR|os.O_CREATE, 0o666)
 	if err != nil {
 		return err
 	}
@@ -77,7 +80,7 @@ func (r *OrderRepository) GetOrder(ctx context.Context, orderID string) (*Order,
 		Orders []Order `json:"orders"`
 	}
 
-	file, err := os.OpenFile("../../data/order.json", os.O_RDONLY, 0o444)
+	file, err := os.OpenFile(filepath.Join(r.DataDir,"order.json"), os.O_RDONLY, 0o444)
 	if err != nil {
 		return nil, err
 	}

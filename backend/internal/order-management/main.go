@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	eventbus "ilkerciblak/order-management/internal/event-bus"
+	"ilkerciblak/order-management/shared/config"
 	"ilkerciblak/order-management/shared/messaging"
 	"log"
 	"net"
@@ -24,6 +25,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to start order service: %v", err)
 	}
+
+	cfg := config.Config()
 
 	// replaced with eventBus subscriptions
 
@@ -49,7 +52,9 @@ func main() {
 	}
 	defer rabbit.Close(context.Background())
 
-	orderRepository := OrderRepository{}
+	orderRepository := OrderRepository{
+		DataDir: cfg.DataDir,
+	}
 	orderService := OrderService{
 		Repository: &orderRepository,
 		Publisher:  rabbit,
